@@ -26,7 +26,7 @@ def translate_logql_to_logsql(logql_query: str) -> TranslateResult:
     res = lib.TranslateLogQLToLogsQL(logql_query.encode())
 
     return TranslateResult(
-        logsql=res.logsql.decode() if r.logsql else "",
-        kind=res.kind.decode() if r.kind else "",
-        error=res.error.decode() if r.error else "",
+        logsql=res.logsql.decode() if res.logsql else "",
+        kind=res.kind.decode() if res.kind else "",
+        error=res.error.decode() if res.error else "",
     )
