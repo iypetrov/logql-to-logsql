@@ -12,6 +12,7 @@ typedef struct {
 import "C"
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -136,6 +137,7 @@ func (b *logsQLBuilder) addLogSelectorWithFilters(expr syntax.LogSelectorExpr, f
 		}
 		return nil
 	default:
+
 		return fmt.Errorf("unsupported LogQL log selector type %T", expr)
 	}
 }
@@ -173,6 +175,7 @@ func (b *logsQLBuilder) addStage(stage syntax.StageExpr) error {
 		return nil
 	case *syntax.DropLabelsExpr:
 		raw := strings.TrimSpace(strings.TrimPrefix(s.String(), syntax.OpPipe+" "+syntax.OpDrop))
+		raw = strings.TrimSpace(raw)
 		if raw == "" {
 			return nil
 		}
@@ -213,6 +216,7 @@ func (b *logsQLBuilder) addStage(stage syntax.StageExpr) error {
 	case *syntax.KeepLabelsExpr:
 		// KeepLabelsExpr doesn't expose parsed items, so parse the string form.
 		raw := strings.TrimSpace(strings.TrimPrefix(s.String(), syntax.OpPipe+" "+syntax.OpKeep))
+		raw = strings.TrimSpace(raw)
 		if raw == "" {
 			return nil
 		}
@@ -237,7 +241,7 @@ func (b *logsQLBuilder) addStage(stage syntax.StageExpr) error {
 				continue
 			}
 			if strings.ContainsAny(item, "\"`") {
-				return fmt.Errorf("invalid LogQL keep label; convert it manually (see logsql/logql-to-logsql.md)")
+				return errors.New("invalid LogQL keep label; convert it manually (see logsql/logql-to-logsql.md)")
 			}
 			unconditional = append(unconditional, item)
 		}
@@ -365,6 +369,7 @@ func translateLineFilterOrGroup(e *syntax.LineFilterExpr) (string, error) {
 	if e.Op != "" {
 		return "", fmt.Errorf("unsupported LogQL line filter function %q", e.Op)
 	}
+
 	leaf, err := translateLineFilterLeaf(e.Ty, e.Match)
 	if err != nil {
 		return "", err
@@ -372,9 +377,11 @@ func translateLineFilterOrGroup(e *syntax.LineFilterExpr) (string, error) {
 	if e.Or == nil {
 		return leaf, nil
 	}
+
 	if e.Ty != lokilog.LineMatchEqual && e.Ty != lokilog.LineMatchRegexp && e.Ty != lokilog.LineMatchPattern {
-		return "", fmt.Errorf("LogQL line filter 'or' for negative matches isn't supported yet; rewrite the query without 'or'")
+		return "", errors.New("LogQL line filter 'or' for negative matches isn't supported yet; rewrite the query without 'or'")
 	}
+
 	parts := []string{leaf}
 	for orNode := e.Or; orNode != nil; orNode = orNode.Or {
 		p, err := translateLineFilterLeaf(orNode.Ty, orNode.Match)
@@ -397,7 +404,7 @@ func translateLineFilterLeaf(ty lokilog.LineMatchType, match string) (string, er
 	case lokilog.LineMatchNotRegexp:
 		return "NOT ~" + quoteString(match), nil
 	case lokilog.LineMatchPattern, lokilog.LineMatchNotPattern:
-		return "", fmt.Errorf("LogQL pattern line filters (|> / !>) aren't supported yet")
+		return "", errors.New("LogQL pattern line filters (|> / !>) aren't supported yet")
 	default:
 		return "", fmt.Errorf("unsupported LogQL line filter type %v", ty)
 	}
@@ -414,10 +421,10 @@ func translateLabelExtractionParser(pipe string, exprs []lokilog.LabelExtraction
 	for _, exp := range exprs {
 		expr := exp.Expression
 		if expr == "" {
-			return nil, fmt.Errorf("empty json/logfmt extraction expression isn't supported; convert it manually (see logsql/logql-to-logsql.md)")
+			return nil, errors.New("empty json/logfmt extraction expression isn't supported; convert it manually (see logsql/logql-to-logsql.md)")
 		}
 		if !isSimpleExtractionField(expr) {
-			return nil, fmt.Errorf("complex json/logfmt extraction expressions aren't supported yet; convert it manually (see logsql/logql-to-logsql.md)")
+			return nil, errors.New("complex json/logfmt extraction expressions aren't supported yet; convert it manually (see logsql/logql-to-logsql.md)")
 		}
 		if _, ok := exprSeen[expr]; !ok {
 			exprSeen[expr] = struct{}{}
@@ -596,7 +603,7 @@ func translateIPFilter(field string, ty lokilog.LabelFilterType, pattern string)
 	case lokilog.LabelFilterNotEqual:
 		return "-" + ipFilter, nil
 	default:
-		return "", fmt.Errorf("only '=' and '!=' are supported for LogQL ip() label filter")
+		return "", errors.New("only '=' and '!=' are supported for LogQL ip() label filter")
 	}
 }
 
@@ -608,6 +615,7 @@ func convertLokiTemplateToLogsQLPattern(s string) string {
 }
 
 func quoteString(s string) string {
+	// Use Go string literal rules, which match LogsQL escaping needs well enough.
 	return strconv.Quote(s)
 }
 
@@ -657,6 +665,7 @@ func isSimpleExtractionField(s string) bool {
 }
 
 func isBareScalar(s string) bool {
+	// Allow identifiers and numeric literals without quoting.
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '.' || c == '-' || c == ':' || c == '/' {
@@ -687,7 +696,7 @@ func translateVectorAggregation(e *syntax.VectorAggregationExpr) (string, error)
 	case syntax.OpTypeSum:
 		r, ok := e.Left.(*syntax.RangeAggregationExpr)
 		if !ok {
-			return "", fmt.Errorf("only sum(<range_aggregation>) is supported for now")
+			return "", errors.New("only sum(<range_aggregation>) is supported for now")
 		}
 		return translateRangeAggregation(r, e.Grouping)
 	case syntax.OpTypeTopK, syntax.OpTypeBottomK:
@@ -696,7 +705,7 @@ func translateVectorAggregation(e *syntax.VectorAggregationExpr) (string, error)
 			return "", err
 		}
 		if e.Grouping != nil && !e.Grouping.Singleton() {
-			return "", fmt.Errorf("topk/bottomk with grouping isn't supported yet")
+			return "", errors.New("topk/bottomk with grouping isn't supported yet")
 		}
 		order := "value desc"
 		if e.Operation == syntax.OpTypeBottomK {
@@ -734,7 +743,7 @@ func translateRangeAggregation(e *syntax.RangeAggregationExpr, grouping *syntax.
 	by := []string{"_stream"}
 	if grouping != nil {
 		if grouping.Without {
-			return "", fmt.Errorf("grouping 'without(...)' isn't supported yet")
+			return "", errors.New("grouping 'without(...)' isn't supported yet")
 		}
 		switch {
 		case grouping.Singleton():
@@ -781,12 +790,12 @@ func rangeAggregationToStatsPipe(e *syntax.RangeAggregationExpr) (string, error)
 	switch e.Operation {
 	case syntax.OpRangeTypeRate:
 		if e.Left.Unwrap != nil {
-			return "", fmt.Errorf("rate(...| unwrap ...) isn't supported yet")
+			return "", errors.New("rate(...| unwrap ...) isn't supported yet")
 		}
 		return "rate() as value", nil
 	case syntax.OpRangeTypeCount:
 		if e.Left.Unwrap != nil {
-			return "", fmt.Errorf("count_over_time(...| unwrap ...) isn't supported yet")
+			return "", errors.New("count_over_time(...| unwrap ...) isn't supported yet")
 		}
 		return "count() as value", nil
 	case syntax.OpRangeTypeAvg, syntax.OpRangeTypeSum, syntax.OpRangeTypeMin, syntax.OpRangeTypeMax:
@@ -808,7 +817,7 @@ func rangeAggregationToStatsPipe(e *syntax.RangeAggregationExpr) (string, error)
 		return fn + " as value", nil
 	case syntax.OpRangeTypeQuantile:
 		if e.Left.Unwrap == nil || e.Params == nil {
-			return "", fmt.Errorf("quantile_over_time requires unwrap and quantile parameter")
+			return "", errors.New("quantile_over_time requires unwrap and quantile parameter")
 		}
 		field := quoteFieldNameIfNeeded(e.Left.Unwrap.Identifier)
 		return fmt.Sprintf("quantile(%s, %s) as value", formatFloat(*e.Params), field), nil
