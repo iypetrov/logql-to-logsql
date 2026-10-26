@@ -10,3 +10,6 @@ dependencies = []
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+logql_to_logsql = ["libs/*.so"]
