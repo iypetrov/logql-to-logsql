@@ -88,33 +88,83 @@ CASES = [
         id="topk_rate_by_label",
     ),
     pytest.param(
+        '{app="nginx"} |= "error"',
+        '{app="nginx"} "error"',
+        id="line_contains_nginx",
+    ),
+    pytest.param(
         '|= "error"',
         '{} "error"',
         id="no_stream_selector",
     ),
     pytest.param(
-        '{collector="otel-collector"} | keep foo=~"bar"',
-        '{collector="otel-collector"} | format if (foo:~"bar") "<foo>" as foo',
+        '{app="nginx"} | json | trace_id="abcdef"',
+        '{app="nginx"} | unpack_json | filter trace_id:=abcdef',
+        id="json_and_label_eq",
+    ),
+    pytest.param(
+        '{app="nginx"} | drop foo=~"bar"',
+        '{app="nginx"} | format if (foo:~"bar") "" as foo',
+        id="drop_labels_conditional_nginx",
+    ),
+    pytest.param(
+        '{app="nginx"} | keep foo=~"bar"',
+        '{app="nginx"} | format if (foo:~"bar") "<foo>" as foo',
         id="keep_labels_conditional",
     ),
     pytest.param(
-        'sum(count_over_time({collector="otel-collector"}[5m]))',
-        '{collector="otel-collector"} _time:5m | stats count() as value',
+        '{app="nginx"} | json duration="duration"',
+        '{app="nginx"} | unpack_json fields (duration)',
+        id="json_extract_field_nginx",
+    ),
+    pytest.param(
+        '{app="nginx"} | json latency="duration"',
+        '{app="nginx"} | unpack_json fields (duration) | format "<duration>" as latency | delete duration',
+        id="json_extract_rename_nginx",
+    ),
+    pytest.param(
+        '{app="nginx"} | logfmt duration="duration"',
+        '{app="nginx"} | unpack_logfmt fields (duration)',
+        id="logfmt_extract_field_nginx",
+    ),
+    pytest.param(
+        'rate({app="nginx"}[5m])',
+        '{app="nginx"} _time:5m | stats by (_stream) rate() as value',
+        id="rate_nginx",
+    ),
+    pytest.param(
+        'sum(rate({app="nginx"}[5m]))',
+        '{app="nginx"} _time:5m | stats rate() as value',
+        id="sum_rate_nginx",
+    ),
+    pytest.param(
+        'count_over_time({app="nginx"}[5m])',
+        '{app="nginx"} _time:5m | stats by (_stream) count() as value',
+        id="count_over_time_nginx",
+    ),
+    pytest.param(
+        'sum(count_over_time({app="nginx"}[5m]))',
+        '{app="nginx"} _time:5m | stats count() as value',
         id="sum_count_over_time",
     ),
     pytest.param(
-        'sum by (severity) (rate({collector="otel-collector"}[5m]))',
-        '{collector="otel-collector"} _time:5m | stats by (severity) rate() as value',
+        'sum by (severity) (rate({app="nginx"}[5m]))',
+        '{app="nginx"} _time:5m | stats by (severity) rate() as value',
         id="sum_rate_by_label",
     ),
     pytest.param(
-        'rate({collector="otel-collector"}[5m] offset 1h)',
-        '{collector="otel-collector"} _time:5m offset 1h | stats by (_stream) rate() as value',
+        'topk(5, sum by (severity) (rate({app="nginx"}[5m])))',
+        '{app="nginx"} _time:5m | stats by (severity) rate() as value | first 5 (value desc)',
+        id="topk_rate_by_label_nginx",
+    ),
+    pytest.param(
+        'rate({app="nginx"}[5m] offset 1h)',
+        '{app="nginx"} _time:5m offset 1h | stats by (_stream) rate() as value',
         id="rate_with_offset",
     ),
     pytest.param(
-        'avg_over_time({collector="otel-collector"} | unwrap duration [5m])',
-        '{collector="otel-collector"} _time:5m | stats by (_stream) avg(duration) as value',
+        'avg_over_time({app="nginx"} | unwrap duration [5m])',
+        '{app="nginx"} _time:5m | stats by (_stream) avg(duration) as value',
         id="avg_over_time_unwrap",
     ),
 ]
