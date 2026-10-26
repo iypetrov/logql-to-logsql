@@ -4,7 +4,7 @@ from logql_to_logsql.translator import translate_logql_to_logsql
 CASES = [
     pytest.param(
         '{collector="otel-collector"}',
-        'collector:="otel-collector"',
+        '{collector="otel-collector"}',
         id="basic_selector",
     ),
     pytest.param(
@@ -24,12 +24,12 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | products > 5',
-        "TODO",
+        '{collector="otel-collector"} products:>5',
         id="label_filter",
     ),
     pytest.param(
         '{collector="otel-collector"} | json | trace_id!=""',
-        '{collector="otel-collector"} | unpack_json | filter trace_id:!=""',
+        '{collector="otel-collector"} | unpack_json | filter -trace_id:=""',
         id="json_and_label",
     ),
     pytest.param(
@@ -44,7 +44,7 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | logfmt | products >= 10',
-        "TODO",
+        '{collector="otel-collector"} | unpack_logfmt | filter products:>=10',
         id="logfmt_and_label",
     ),
     pytest.param(
@@ -54,7 +54,7 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | logfmt status_code="status"',
-        "TODO",
+        '{collector="otel-collector"} | unpack_logfmt fields (status) | format "<status>" as status_code | delete status',
         id="logfmt_extract_rename",
     ),
     pytest.param(
