@@ -17,18 +17,22 @@ jobs:
             os: linux
             goarch: amd64
             cc: gcc
+            plat: manylinux_2_17_x86_64
           - runs-on: ubuntu-latest
             os: linux
             goarch: arm64
             cc: aarch64-linux-gnu-gcc
+            plat: manylinux_2_17_aarch64
           - runs-on: macos-latest
             os: darwin
             goarch: amd64
             cc: gcc
+            plat: macosx_12_0_x86_64
           - runs-on: macos-latest
             os: darwin
             goarch: arm64
             cc: gcc
+            plat: macosx_12_0_arm64
 
     steps:
       - uses: actions/checkout@v7
@@ -61,7 +65,7 @@ jobs:
       - name: Build wheel
         run: |
           pip install build
-          python -m build --wheel
+          python -m build --wheel --config-setting=--plat-name=${{ matrix.plat }}
 
       - uses: actions/upload-artifact@v7
         with:
