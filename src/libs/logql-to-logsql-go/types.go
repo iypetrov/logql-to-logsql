@@ -1,4 +1,4 @@
-package logql_to_logsql_go
+package main
 
 type QueryKind string
 

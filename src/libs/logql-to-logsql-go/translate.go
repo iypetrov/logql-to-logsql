@@ -1,4 +1,4 @@
-package logql_to_logsql_go
+package main
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 )
 
-func TranslateLogQLToLogsQL(query string) (*QueryInfo, error) {
+func translateLogQLToLogsQL(query string) (*QueryInfo, error) {
 	q := strings.TrimSpace(query)
 	if q == "" {
 		return nil, &TranslationError{Code: http.StatusBadRequest, Message: "logql query is required"}
