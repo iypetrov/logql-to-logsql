@@ -1,10 +1,10 @@
 import pytest
-from logql_to_logsql.translator import translate_logql_to_logsql
+from logql_to_logsql.translate import translate_logql_to_logsql
 
 CASES = [
     pytest.param(
         '{collector="otel-collector"}',
-        'collector:="otel-collector"',
+        '{collector="otel-collector"}',
         id="basic_selector",
     ),
     pytest.param(
@@ -14,7 +14,7 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} != "GET"',
-        '{collector="otel-collector"} !"GET"',
+        '{collector="otel-collector"} -"GET"',
         id="line_not_contains",
     ),
     pytest.param(
@@ -24,12 +24,12 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | products > 5',
-        "TODO",
+        '{collector="otel-collector"} products:>5',
         id="label_filter",
     ),
     pytest.param(
         '{collector="otel-collector"} | json | trace_id!=""',
-        '{collector="otel-collector"} | unpack_json | filter trace_id:!=""',
+        '{collector="otel-collector"} | unpack_json | filter -trace_id:=""',
         id="json_and_label",
     ),
     pytest.param(
@@ -44,7 +44,7 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | logfmt | products >= 10',
-        "TODO",
+        '{collector="otel-collector"} | unpack_logfmt | filter products:>=10',
         id="logfmt_and_label",
     ),
     pytest.param(
@@ -54,7 +54,7 @@ CASES = [
     ),
     pytest.param(
         '{collector="otel-collector"} | logfmt status_code="status"',
-        "TODO",
+        '{collector="otel-collector"} | unpack_logfmt fields (status) | format "<status>" as status_code | delete status',
         id="logfmt_extract_rename",
     ),
     pytest.param(
@@ -87,10 +87,42 @@ CASES = [
         '{collector="otel-collector"} _time:5m | stats by (severity) rate() as value | first 5 (value desc)',
         id="topk_rate_by_label",
     ),
+    pytest.param(
+        '|= "error"',
+        '{} "error"',
+        id="no_stream_selector",
+    ),
+    pytest.param(
+        '{collector="otel-collector"} | keep foo=~"bar"',
+        '{collector="otel-collector"} | format if (foo:~"bar") "<foo>" as foo',
+        id="keep_labels_conditional",
+    ),
+    pytest.param(
+        'sum(count_over_time({collector="otel-collector"}[5m]))',
+        '{collector="otel-collector"} _time:5m | stats count() as value',
+        id="sum_count_over_time",
+    ),
+    pytest.param(
+        'sum by (severity) (rate({collector="otel-collector"}[5m]))',
+        '{collector="otel-collector"} _time:5m | stats by (severity) rate() as value',
+        id="sum_rate_by_label",
+    ),
+    pytest.param(
+        'rate({collector="otel-collector"}[5m] offset 1h)',
+        '{collector="otel-collector"} _time:5m offset 1h | stats by (_stream) rate() as value',
+        id="rate_with_offset",
+    ),
+    pytest.param(
+        'avg_over_time({collector="otel-collector"} | unwrap duration [5m])',
+        '{collector="otel-collector"} _time:5m | stats by (_stream) avg(duration) as value',
+        id="avg_over_time_unwrap",
+    ),
 ]
 
 
 class TestTranslateLogQLToLogsQL:
     @pytest.mark.parametrize("logql,expected", CASES)
     def test_translation(self, logql, expected):
-        assert translate_logql_to_logsql(logql) == expected
+        result = translate_logql_to_logsql(logql)
+        assert result.error == ""
+        assert result.logsql == expected
