@@ -13,6 +13,26 @@ It supports a subset of the LogsQL language.
 ```bash
 pip install logql-to-logsql
 ```
+
+## Usage
+
+```python
+from logql_to_logsql.translate import TranslateError, TranslateResult, translate_logql_to_logsql
+
+
+def main():
+    try:
+        result: TranslateResult = translate_logql_to_logsql('{app="nginx"} |= "error"')
+        print(result.logsql)  # {app="nginx"} "error"
+        print(result.kind)    # logs
+    except TranslateError as e:
+        print(f"translation failed: {e}")
+
+
+if __name__ == '__main__':
+    main()
+```
+
 ## Supported Features
 
 ### Query Types
