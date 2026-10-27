@@ -1,5 +1,5 @@
 import pytest
-from logql_to_logsql.translate import translate_logql_to_logsql
+from logql_to_logsql.translate import TranslateResult, translate_logql_to_logsql
 
 CASES = [
     pytest.param(
@@ -174,5 +174,5 @@ class TestTranslateLogQLToLogsQL:
     @pytest.mark.parametrize("logql,expected", CASES)
     def test_translation(self, logql, expected):
         result = translate_logql_to_logsql(logql)
-        assert result.error == ""
+        assert isinstance(result, TranslateResult)
         assert result.logsql == expected

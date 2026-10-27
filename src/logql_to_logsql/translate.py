@@ -11,11 +11,14 @@ class _CTranslateResult(Structure):
     ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class TranslateResult:
     logsql: str
     kind: str
-    error: str
+
+
+class TranslateError(Exception):
+    pass
 
 
 def translate_logql_to_logsql(logql_query: str) -> TranslateResult:
@@ -25,8 +28,11 @@ def translate_logql_to_logsql(logql_query: str) -> TranslateResult:
     lib.TranslateLogQLToLogsQL.restype = _CTranslateResult
     res = lib.TranslateLogQLToLogsQL(logql_query.encode())
 
+    error = res.error.decode() if res.error else ""
+    if error:
+        raise TranslateError(error)
+
     return TranslateResult(
         logsql=res.logsql.decode() if res.logsql else "",
         kind=res.kind.decode() if res.kind else "",
-        error=res.error.decode() if res.error else "",
     )
