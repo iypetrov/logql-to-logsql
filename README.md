@@ -13,7 +13,6 @@ It supports a subset of the LogsQL language.
 ```bash
 pip install logql-to-logsql
 ```
-
 ## Supported Features
 
 ### Query Types
