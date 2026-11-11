@@ -4,9 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logql-to-logsql"
-version = "0.2.0"
+version = "0.2.1"
 requires-python = ">=3.13"
 dependencies = []
+description = "A Python library that converts Loki's LogQL to VictoriaLogs's LogsQL."
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/iypetrov/logql-to-logsql"
+Source = "https://github.com/iypetrov/logql-to-logsql"
 
 [tool.setuptools.packages.find]
 where = ["src"]
